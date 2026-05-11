@@ -15,13 +15,10 @@ All activity is also streamed to  scraper.log
 import argparse
 import logging
 import sys
-from pathlib import Path
 
-from bs4 import BeautifulSoup
-
-from scraper.client import build_session, fetch
+from scraper.client import build_session, fetch_page, wiki_url_to_title
 from scraper.extractor import extract
-from scraper.navigator import INDEX_URL, parse_index
+from scraper.navigator import INDEX_PAGE_TITLE, parse_index
 from scraper.organizer import save_transcript, write_missing_log
 
 # ---------------------------------------------------------------------------
@@ -67,16 +64,14 @@ def _parse_args() -> argparse.Namespace:
 def run(dry_run: bool = False, campaign_filter: str = "") -> None:
     session = build_session()
 
-    # 1. Fetch and parse the index
-    logger.info("Fetching index: %s", INDEX_URL)
-    resp = fetch(session, INDEX_URL)
-    if not resp:
+    # 1. Fetch and parse the index via MediaWiki API
+    logger.info("Fetching index page '%s' via API…", INDEX_PAGE_TITLE)
+    index_soup = fetch_page(session, INDEX_PAGE_TITLE)
+    if not index_soup:
         logger.error("Failed to fetch index page. Aborting.")
         sys.exit(1)
 
-    soup = BeautifulSoup(resp.content, "lxml")
-    sections = parse_index(soup)
-
+    sections = parse_index(index_soup)
     if not sections:
         logger.error("No sections found in index. Check page structure.")
         sys.exit(1)
@@ -126,13 +121,19 @@ def run(dry_run: bool = False, campaign_filter: str = "") -> None:
                 missing.append(f"[{campaign}] [{arc}] {title} — no URL on index page")
                 continue
 
+            # Convert wiki URL to page title for the API
+            page_title = wiki_url_to_title(url)
+            if not page_title:
+                logger.warning("%s Cannot parse page title from %s", prefix, url)
+                missing.append(f"[{campaign}] [{arc}] {title} — bad URL ({url})")
+                continue
+
             logger.info("%s %s", prefix, title)
-            ep_resp = fetch(session, url)
-            if not ep_resp:
+            ep_soup = fetch_page(session, page_title)
+            if not ep_soup:
                 missing.append(f"[{campaign}] [{arc}] {title} — fetch failed ({url})")
                 continue
 
-            ep_soup = BeautifulSoup(ep_resp.content, "lxml")
             text = extract(ep_soup)
             if not text:
                 logger.warning("     Empty extraction for %s", url)
@@ -161,7 +162,7 @@ def _print_structure(sections: list[dict]) -> None:
             print(f"{'=' * 60}")
         print(f"  ARC: {s['arc']} ({len(s['episodes'])} episodes)")
         for ep in s["episodes"]:
-            marker = "✓" if ep["url"] else "✗"
+            marker = "OK" if ep["url"] else "!!"
             print(f"    [{marker}] {ep['title']}")
 
 
