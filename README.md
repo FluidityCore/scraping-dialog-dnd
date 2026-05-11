@@ -3,14 +3,18 @@
 Scrapes every transcript from the [Critical Role wiki](https://criticalrole.fandom.com/wiki/Transcripts)
 and saves them locally, organised by **Campaign → Arc → Episode**.
 
+Covers **563 episodes** across Campaign 1 (Vox Machina), Campaign 2 (The Mighty Nein),
+Campaign Three (Bells Hells), Campaign Four, Exandria Unlimited, Specials, and Miscellaneous.
+
 ## Project structure
 
 ```
 scraping-dialog-dnd/
 ├── main.py                  # Entry point
 ├── requirements.txt
+├── AGENTS.md                # Full session context and design decisions
 ├── scraper/
-│   ├── client.py            # HTTP session + fetch with retry + delay
+│   ├── client.py            # HTTP session via MediaWiki API + retry + delay
 │   ├── navigator.py         # Index page parser (Campaign / Arc / Episode)
 │   ├── extractor.py         # Transcript page cleaner
 │   └── organizer.py         # File I/O + missing-episode log
@@ -34,9 +38,20 @@ py main.py --dry-run
 # 3. Scrape a single campaign (substring match, case-insensitive)
 py main.py --campaign "Campaign 1"
 
-# 4. Scrape everything (takes several hours — ~1-2 s delay per request)
+# 4. Scrape everything (~20 min with the 1-2 s polite delay)
 py main.py
+
+# 5. Resume an interrupted run / retry missing episodes only
+py main.py --skip-existing
 ```
+
+## CLI flags
+
+| Flag | Description |
+|------|-------------|
+| `--dry-run` | Parse the index and print the full structure, no downloads |
+| `--campaign SUBSTR` | Only process campaigns whose name contains SUBSTR (case-insensitive) |
+| `--skip-existing` | Skip episodes whose `.txt` file already exists — use to resume or retry |
 
 ## Build steps (git history)
 
@@ -48,11 +63,14 @@ py main.py
 | step 4 | `scraper/extractor.py` – transcript text cleaner |
 | step 5 | `scraper/organizer.py` – file tree builder + missing log |
 | step 6 | `main.py` – orchestrator with `--dry-run` and `--campaign` flags |
-| step 7 | This README |
+| step 7 | `README.md` |
+| step 8 | Fix HTTP 403 (switch to MediaWiki API) + recursive collapsible parser for all campaigns |
+| fix    | `redirects=1` in API calls — resolves pages that redirect on the wiki |
+| feat   | `--skip-existing` flag for resuming / retrying missing episodes |
 
 ## Handling the data volume
 
-Critical Role has **3 campaigns** and hundreds of episodes. Each transcript
+Critical Role has 4 campaigns and hundreds of episodes. Each transcript
 can be 50–150 KB of text. Here is how this project manages the load:
 
 ### 1 · Polite rate-limiting
@@ -61,11 +79,9 @@ can be 50–150 KB of text. Here is how this project manages the load:
 Fandom's soft limits and avoids CAPTCHAs.
 
 ### 2 · Resumable runs
-`organizer.py` writes each file immediately after extraction. If the process
-is interrupted (power cut, Ctrl-C) you can simply re-run and skip the
-campaigns/arcs you already have — use `--campaign` to cherry-pick.
-Adding an existence check (`if not path.exists()`) before re-downloading
-is a one-line improvement for production use.
+Every file is written immediately after extraction. If the process is interrupted,
+re-run with `--skip-existing` to fetch only what is missing. Combine with
+`--campaign` to cherry-pick a single campaign.
 
 ### 3 · Output directory is git-ignored
 Hundreds of plain-text files totalling several hundred MB should **never**
@@ -80,7 +96,14 @@ episodes. Peak RAM usage is bounded by the largest single transcript page
 ### 5 · Logging and error recovery
 All activity is written to `scraper.log`. Episodes that could not be fetched
 or produced empty content are recorded in `Output/missing_transcripts.log`
-so you can inspect and retry them manually.
+so you can inspect and retry them with `--skip-existing`.
+
+## Known limitations
+
+| Issue | Status |
+|-------|--------|
+| November/December 2015 Critmas, SDCC 2016 Dating Game panel | No transcript subpage exists on the wiki — genuinely missing |
+| Any future episodes added to the wiki | Re-run `py main.py --skip-existing` to fetch only the new ones |
 
 ## License
 
