@@ -91,6 +91,7 @@ def fetch_page(session: requests.Session, page_title: str) -> BeautifulSoup | No
         "prop": "text",
         "format": "json",
         "disablelimitreport": "1",
+        "redirects": "1",  # follow MediaWiki redirects automatically
     }
     api_url = API_BASE + "?" + urllib.parse.urlencode(params)
 
