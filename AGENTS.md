@@ -240,3 +240,14 @@ py main.py --campaign "Campaign Three" --skip-existing
 | Specials aparece como arco dentro de "Campaign Four" | Añadir lógica para promover collapsibles con heading no-"Arc" a campaña propia |
 | No verifica si el archivo existente está completo/corrupto | Añadir checksum o verificar tamaño mínimo antes de saltar con `--skip-existing` |
 | Si el wiki cambia su estructura HTML, el parser falla silenciosamente | Añadir assertions o alertas cuando `sections` queda vacío por campaña |
+
+---
+
+## Configuración de Desarrollo
+
+Para garantizar que todas las dependencias (`requests`, `beautifulsoup4`, `lxml`) estén aisladas, se utiliza un entorno virtual de Python.
+
+**Comandos clave (Windows):**
+- **Activación:** `.\.venv\Scripts\Activate.ps1`
+- **Instalación:** `pip install -r requirements.txt`
+- **Ejecución:** `python main.py` (una vez activado) o `.\.venv\Scripts\python.exe main.py`

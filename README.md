@@ -28,20 +28,30 @@ scraping-dialog-dnd/
 
 ## Quick start
 
-```bash
-# 1. Install dependencies
-pip install -r requirements.txt
+### 1. Configuración del Entorno (Windows)
+```powershell
+# Crear el entorno virtual
+py -m venv .venv
 
-# 2. Preview the index structure without downloading anything
+# Activar el entorno
+.\.venv\Scripts\Activate.ps1
+
+# Instalar dependencias
+pip install -r requirements.txt
+```
+
+### 2. Uso del Scraper
+```powershell
+# Ver estructura sin descargar nada
 py main.py --dry-run
 
-# 3. Scrape a single campaign (substring match, case-insensitive)
+# Scrape de una sola campaña
 py main.py --campaign "Campaign 1"
 
-# 4. Scrape everything (~20 min with the 1-2 s polite delay)
+# Scrape completo (~20 min)
 py main.py
 
-# 5. Resume an interrupted run / retry missing episodes only
+# Retomar descarga interrumpida
 py main.py --skip-existing
 ```
 
