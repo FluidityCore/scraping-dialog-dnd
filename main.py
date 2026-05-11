@@ -19,7 +19,7 @@ import sys
 from scraper.client import build_session, fetch_page, wiki_url_to_title
 from scraper.extractor import extract
 from scraper.navigator import INDEX_PAGE_TITLE, parse_index
-from scraper.organizer import save_transcript, write_missing_log
+from scraper.organizer import episode_path, save_transcript, write_missing_log
 
 # ---------------------------------------------------------------------------
 # Logging setup – file + console
@@ -54,6 +54,11 @@ def _parse_args() -> argparse.Namespace:
         default="",
         help="Only process campaigns whose name contains SUBSTR (case-insensitive).",
     )
+    parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="Skip episodes whose output file already exists (resume / retry missing).",
+    )
     return parser.parse_args()
 
 
@@ -61,7 +66,7 @@ def _parse_args() -> argparse.Namespace:
 # Core
 # ---------------------------------------------------------------------------
 
-def run(dry_run: bool = False, campaign_filter: str = "") -> None:
+def run(dry_run: bool = False, campaign_filter: str = "", skip_existing: bool = False) -> None:
     session = build_session()
 
     # 1. Fetch and parse the index via MediaWiki API
@@ -128,6 +133,11 @@ def run(dry_run: bool = False, campaign_filter: str = "") -> None:
                 missing.append(f"[{campaign}] [{arc}] {title} — bad URL ({url})")
                 continue
 
+            if skip_existing and episode_path(campaign, arc, arc_ep_num, title).exists():
+                logger.info("%s [skip] %s", prefix, title)
+                saved += 1
+                continue
+
             logger.info("%s %s", prefix, title)
             ep_soup = fetch_page(session, page_title)
             if not ep_soup:
@@ -170,4 +180,4 @@ def _print_structure(sections: list[dict]) -> None:
 
 if __name__ == "__main__":
     args = _parse_args()
-    run(dry_run=args.dry_run, campaign_filter=args.campaign)
+    run(dry_run=args.dry_run, campaign_filter=args.campaign, skip_existing=args.skip_existing)
