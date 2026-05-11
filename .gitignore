@@ -1,0 +1,20 @@
+# Scraper output – can be hundreds of MB, never commit
+Output/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.env
+.venv/
+env/
+
+# Logs
+*.log
+scraper_errors.log
+
+# IDE
+.vscode/
+.idea/
